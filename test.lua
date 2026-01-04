@@ -827,26 +827,24 @@ Tabs.Main:AddToggle("FakeRockPunch", {
 end)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local petRemote = ReplicatedStorage:WaitForChild("cPetShopRemote")
+
 local petFolder = ReplicatedStorage:WaitForChild("cPetShopFolder")
+local petRemote = ReplicatedStorage:WaitForChild("cPetShopRemote")
 
--- State
-local autoBuyEnabled = false
 local selectedPet = nil
+local autoBuyEnabled = false
 
--- Pet isimlerini folder'dan çek
+-- SADECE 1. SEVİYE – NE VARSA AL
 local petList = {}
 
-for _, pet in pairs(petFolder:GetChildren()) do
-    if pet:IsA("Folder") then
-        table.insert(petList, pet.Name)
-    end
+for _, inst in ipairs(petFolder:GetChildren()) do
+    table.insert(petList, inst.Name)
 end
 
 table.sort(petList)
 
 -- Dropdown
-local petDropdown = Tabs.Crystal:AddDropdown("PetAutoBuyDropdown", {
+local petDropdown = Tabs.Main:AddDropdown("PetAutoBuyDropdown", {
     Title = "Select Pet",
     Values = petList,
     Default = petList[1],
@@ -855,11 +853,10 @@ local petDropdown = Tabs.Crystal:AddDropdown("PetAutoBuyDropdown", {
     end
 })
 
--- Varsayılan seçimi ata
 selectedPet = petList[1]
 
 -- Toggle
-local petAutoBuyToggle = Tabs.Crystal:AddToggle("PetAutoBuyToggle", {
+local petAutoBuyToggle = Tabs.Main:AddToggle("PetAutoBuyToggle", {
     Title = "Auto Buy Pet",
     Default = false
 })
@@ -878,7 +875,6 @@ petAutoBuyToggle:OnChanged(function(state)
                         end
                     end
                 end)
-
                 task.wait(0.4)
             end
         end)
