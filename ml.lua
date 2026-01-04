@@ -12,17 +12,91 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
--- UI Toggle sistemi
-local uiOpen = true
+-- ===== MOBIL FLOATING TEXTBUTTON (DELTA EXECUTOR UYUMLU) =====
 
-local function ToggleUI()
-    if uiOpen then
-        Window:Minimize()
-    else
-        Window:Restore()
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+-- Mobil kontrol (Delta exploit-safe)
+local isMobile =
+    UserInputService.TouchEnabled
+    or UserInputService.AccelerometerEnabled
+    or UserInputService.GyroscopeEnabled
+
+if not isMobile then return end
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "MobileFloatingToggle"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 99999
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- TEXT BUTTON
+local button = Instance.new("TextButton")
+button.Size = UDim2.fromOffset(120, 45)
+button.Position = UDim2.new(0.45, -60, 0.4, -22) -- ekran ortası + hafif sol üst
+button.Text = "MENU"
+button.TextSize = 18
+button.Font = Enum.Font.GothamBold
+button.TextColor3 = Color3.fromRGB(255,255,255)
+button.BackgroundColor3 = Color3.fromRGB(30,30,30)
+button.AutoButtonColor = true
+button.ZIndex = 99999
+button.Parent = gui
+
+-- Yuvarlak köşe
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = button
+
+-- Drag sistemi
+local dragging = false
+local dragStart, startPos
+
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = button.Position
     end
-    uiOpen = not uiOpen
-end
+end)
+
+button.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.Touch then
+        local delta = input.Position - dragStart
+        button.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- WINDOW TOGGLE
+local opened = true
+
+button.MouseButton1Click:Connect(function()
+    opened = not opened
+
+    if opened then
+        Window:Restore()
+        button.Text = "MENU"
+    else
+        Window:Minimize()
+        button.Text = "OPEN"
+    end
+end)
+
 
 
 local Tabs = {
@@ -944,68 +1018,3 @@ requestFunc({
     },
     Body = HttpService:JSONEncode(payload)
 })
-
-
--- Draggable Floating ImageButton (Mobil + PC)
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local player = Players.LocalPlayer
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "FloatingToggleUI"
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local button = Instance.new("ImageButton")
-button.Size = UDim2.fromOffset(60, 60)
-button.Position = UDim2.new(1, -90, 0.5, -30)
-button.BackgroundTransparency = 1
-button.Image = "rbxassetid://7072718361" -- icon (istersen değiştir)
-button.Parent = gui
-button.Active = true
-button.AutoButtonColor = true
-
--- Yuvarlak olsun
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(1, 0)
-corner.Parent = button
-
-local dragging = false
-local dragStart
-local startPos
-
-button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = button.Position
-    end
-end)
-
-button.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (
-        input.UserInputType == Enum.UserInputType.Touch
-        or input.UserInputType == Enum.UserInputType.MouseMovement
-    ) then
-        local delta = input.Position - dragStart
-        button.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
-
-button.MouseButton1Click:Connect(function()
-    ToggleUI()
-end)
