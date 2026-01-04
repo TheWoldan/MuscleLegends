@@ -947,6 +947,8 @@ requestFunc({
 
 
 -- Draggable Floating ImageButton (Mobil + PC)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 local gui = Instance.new("ScreenGui")
