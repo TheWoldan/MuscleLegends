@@ -573,22 +573,28 @@ end)
 
 local autoPunch = false
 
-local function playAttackAnimation(animationInstance)
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-
-    local animator = humanoid:FindFirstChildOfClass("Animator")
-    if not animator then
-        animator = Instance.new("Animator")
-        animator.Parent = humanoid
-    end
-
-    -- ReplicatedStorage'tan animasyonu klonla ve yükle
-    local anim = animationInstance:Clone()
-    local track = animator:LoadAnimation(anim)
-    track:Play()
+-- Animator hazırlığı (1 kere)
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local animator = humanoid:FindFirstChildOfClass("Animator")
+if not animator then
+    animator = Instance.new("Animator")
+    animator.Parent = humanoid
 end
+
+-- GERÇEK animasyonlar
+local leftAnim = Instance.new("Animation")
+leftAnim.AnimationId = "rbxassetid://3638767427" -- SOL (7)
+
+local rightAnim = Instance.new("Animation")
+rightAnim.AnimationId = "rbxassetid://3638749874" -- SAĞ (4)
+
+local leftTrack = animator:LoadAnimation(leftAnim)
+local rightTrack = animator:LoadAnimation(rightAnim)
+
+-- gerçekçi hız
+leftTrack:AdjustSpeed(1)
+rightTrack:AdjustSpeed(1)
 
 local AutoPunchToggle = Tabs.Main:AddToggle("AutoPunch", {
     Title = "Auto Punch",
@@ -601,36 +607,43 @@ AutoPunchToggle:OnChanged(function(Value)
     if autoPunch then
         task.spawn(function()
             while autoPunch do
+                local char = player.Character
+                if not char then break end
 
-                local player = game.Players.LocalPlayer
+                -- Tool elde olsun
                 local tool = player.Backpack:FindFirstChild("Punch")
                 if tool then
-                    tool.Parent = player.Character
+                    tool.Parent = char
                 end
 
-                 -- Sol yumruk
-                local argsLeft = { "punch", "leftHand" }
+                -- 🥊 SOL YUMRUK
+                if not leftTrack.IsPlaying then
+                    leftTrack:Play()
+                end
 
                 pcall(function()
-                    game.Players.LocalPlayer:WaitForChild("muscleEvent"):FireServer(unpack(argsLeft))
-                    local animLeft = game:GetService("ReplicatedStorage").GameAnims.Tools.Punch.attacks.leftAttack
-                    playAttackAnimation(animLeft)
-                end)
-
-                task.wait(0.4)
-                -- Sağ yumruk
-                local argsRight = { "punch", "rightHand" }
-
-                pcall(function()
-                    game.Players.LocalPlayer:WaitForChild("muscleEvent"):FireServer(unpack(argsRight))
-                    local animRight = game:GetService("ReplicatedStorage").GameAnims.Tools.Punch.attacks.rightAttack
-                    playAttackAnimation(animRight)
+                    player:WaitForChild("muscleEvent"):FireServer("punch", "leftHand")
                 end)
 
                 task.wait(0.4)
 
+                -- 🥊 SAĞ YUMRUK
+                if not rightTrack.IsPlaying then
+                    rightTrack:Play()
+                end
 
+                pcall(function()
+                    player:WaitForChild("muscleEvent"):FireServer("punch", "rightHand")
+                end)
+
+                task.wait(0.4)
             end
+        end)
+    else
+        -- kapatılınca animasyonları kes
+        pcall(function()
+            leftTrack:Stop()
+            rightTrack:Stop()
         end)
     end
 end)
