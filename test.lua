@@ -826,6 +826,65 @@ Tabs.Main:AddToggle("FakeRockPunch", {
     end
 end)
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local petRemote = ReplicatedStorage:WaitForChild("cPetShopRemote")
+local petFolder = ReplicatedStorage:WaitForChild("cPetShopFolder")
+
+-- State
+local autoBuyEnabled = false
+local selectedPet = nil
+
+-- Pet isimlerini folder'dan çek
+local petList = {}
+
+for _, pet in pairs(petFolder:GetChildren()) do
+    if pet:IsA("Folder") then
+        table.insert(petList, pet.Name)
+    end
+end
+
+table.sort(petList)
+
+-- Dropdown
+local petDropdown = Tabs.Crystal:AddDropdown("PetAutoBuyDropdown", {
+    Title = "Select Pet",
+    Values = petList,
+    Default = petList[1],
+    Callback = function(value)
+        selectedPet = value
+    end
+})
+
+-- Varsayılan seçimi ata
+selectedPet = petList[1]
+
+-- Toggle
+local petAutoBuyToggle = Tabs.Crystal:AddToggle("PetAutoBuyToggle", {
+    Title = "Auto Buy Pet",
+    Default = false
+})
+
+petAutoBuyToggle:OnChanged(function(state)
+    autoBuyEnabled = state
+
+    if autoBuyEnabled then
+        task.spawn(function()
+            while autoBuyEnabled do
+                pcall(function()
+                    if selectedPet then
+                        local petInstance = petFolder:FindFirstChild(selectedPet)
+                        if petInstance then
+                            petRemote:InvokeServer(petInstance)
+                        end
+                    end
+                end)
+
+                task.wait(0.4)
+            end
+        end)
+    end
+end)
+
 Tabs.Exploits:AddButton({
     Title = "Inject Dex Explorer (Only Developers!)",
     Description = "Geliştirici aracı olan DEX'i inject eder.",
