@@ -12,6 +12,19 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
+-- UI Toggle sistemi
+local uiOpen = true
+
+local function ToggleUI()
+    if uiOpen then
+        Window:Minimize()
+    else
+        Window:Restore()
+    end
+    uiOpen = not uiOpen
+end
+
+
 local Tabs = {
     Home = Window:AddTab({ Title = "Home", Icon = "circle-user-round" }),
     Main = Window:AddTab({ Title = "Main", Icon = "map" }),
@@ -931,3 +944,66 @@ requestFunc({
     },
     Body = HttpService:JSONEncode(payload)
 })
+
+
+-- Draggable Floating ImageButton (Mobil + PC)
+local player = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "FloatingToggleUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("ImageButton")
+button.Size = UDim2.fromOffset(60, 60)
+button.Position = UDim2.new(1, -90, 0.5, -30)
+button.BackgroundTransparency = 1
+button.Image = "rbxassetid://7072718361" -- icon (istersen değiştir)
+button.Parent = gui
+button.Active = true
+button.AutoButtonColor = true
+
+-- Yuvarlak olsun
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = button
+
+local dragging = false
+local dragStart
+local startPos
+
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch
+    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = button.Position
+    end
+end)
+
+button.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch
+    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (
+        input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseMovement
+    ) then
+        local delta = input.Position - dragStart
+        button.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+
+button.MouseButton1Click:Connect(function()
+    ToggleUI()
+end)
