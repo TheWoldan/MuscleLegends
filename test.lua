@@ -844,7 +844,7 @@ end
 table.sort(petList)
 
 -- Dropdown
-local petDropdown = Tabs.Main:AddDropdown("PetAutoBuyDropdown", {
+local petDropdown = Tabs.Crystal:AddDropdown("PetAutoBuyDropdown", {
     Title = "Select Pet",
     Values = petList,
     Default = petList[1],
@@ -856,7 +856,7 @@ local petDropdown = Tabs.Main:AddDropdown("PetAutoBuyDropdown", {
 selectedPet = petList[1]
 
 -- Toggle
-local petAutoBuyToggle = Tabs.Main:AddToggle("PetAutoBuyToggle", {
+local petAutoBuyToggle = Tabs.Crystal:AddToggle("PetAutoBuyToggle", {
     Title = "Auto Buy Pet",
     Default = false
 })
