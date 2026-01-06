@@ -31,7 +31,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 -- TEXT BUTTON
 local button = Instance.new("TextButton")
 button.Size = UDim2.fromOffset(65, 65)
-button.Position = UDim2.new(0.35, -100, 0.3, -60) -- ekran ortası + hafif sol üst
+button.Position = UDim2.new(0.35, -100, 0.3, -60)
 button.Text = "NL"
 button.TextSize = 18
 button.Font = Enum.Font.GothamBold
