@@ -1,6 +1,7 @@
 --[[
 cok az uyuyorum cunku para sayiyorum aileme bakiyorum adam oluyorum bazen kendi dusunceme bile ayar oluyorum :D
 ]]--
+
 local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/Woldan1337/mllegendsss3123/refs/heads/main/UI.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Woldan1337/mllegendsss3123/refs/heads/main/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Woldan1337/mllegendsss3123/refs/heads/main/InterfaceManager.lua"))()
