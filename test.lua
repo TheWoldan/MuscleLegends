@@ -324,33 +324,12 @@ local bringMode = "Bring"
 local selectedTarget = nil
 local whitelistTarget = nil
 local noBringConnections = {}
-
+local hiddenAcc = {}
+local playerList = {}
 -- ===============================
 -- UI
 -- ===============================
-local function releaseTarget(plr)
-    -- Heartbeat bağlantısını kes
-    if noBringConnections[plr] then
-        noBringConnections[plr]:Disconnect()
-        noBringConnections[plr] = nil
-    end
 
-    if not plr.Character then return end
-    local char = plr.Character
-    local head = char:FindFirstChild("Head")
-
-    -- Head'i eski haline getir
-    if head then
-        head.Massless = false
-        head.CanCollide = true
-    end
-
-    -- Neck'i tekrar aç
-    local neck = char:FindFirstChild("Neck", true)
-    if neck and neck:IsA("Motor6D") then
-        neck.Enabled = true
-    end
-end
 
 Tabs.Killer:AddDropdown("BringMode", {
     Title = "Bring Mode",
@@ -375,7 +354,6 @@ Tabs.Killer:AddDropdown("BringMode", {
     end
 end)
 
-local playerList = {}
 local function refreshPlayers()
     table.clear(playerList)
 
@@ -385,13 +363,18 @@ local function refreshPlayers()
         end
     end
 
-    -- 🔥 Fluent dropdown'lara bildir
     if targetDropdown then
         targetDropdown:SetValues(playerList)
+        if #playerList > 0 then
+            targetDropdown:SetValue(playerList[1])
+            selectedTarget = playerList[1]
+        end
     end
 
     if whitelistDropdown then
         whitelistDropdown:SetValues(playerList)
+        whitelistDropdown:SetValue(nil)
+        whitelistTarget = nil
     end
 end
 
@@ -399,7 +382,6 @@ end
 targetDropdown = Tabs.Killer:AddDropdown("TargetPlayer", {
     Title = "Auto Kill Player",
     Values = playerList,
-    Default = playerList[1]
 }):OnChanged(function(v)
     selectedTarget = v
 end)
@@ -407,9 +389,8 @@ end)
 whitelistDropdown = Tabs.Killer:AddDropdown("WhitelistPlayer", {
     Title = "Whitelist Player",
     Values = playerList,
-    Default = nil
 }):OnChanged(function(v)
-    whitelistTarget = v
+    whitelistTarget = Players:FindFirstChild(v)
 end)
 
 Tabs.Killer:AddButton({
@@ -462,7 +443,9 @@ local RunService = game:GetService("RunService")
 
 local function bringTarget(plr)
     if plr == lp then return end
-    if whitelistTarget and plr.Name == whitelistTarget then return end
+    if whitelistTarget and plr == whitelistTarget then
+        return
+    end
 
     local myChar = lp.Character
     local targetChar = plr.Character
@@ -477,6 +460,31 @@ local function bringTarget(plr)
     local head = targetChar:FindFirstChild("Head")
 
     if not myHand or not head then return end
+
+    local humanoid = targetChar:FindFirstChildOfClass("Humanoid")
+    if humanoid and not humanoid:GetAttribute("NoBringHooked") then
+        humanoid:SetAttribute("NoBringHooked", true)
+    
+        humanoid.Died:Connect(function()
+            releaseTarget(plr)
+            if humanoid then
+                humanoid:SetAttribute("NoBringHooked", nil)
+            end
+        end)
+    end
+
+    -- ACCESSORY'LERİ SADECE 1 KERE GİZLE
+    if not hiddenAcc[plr] then
+        hiddenAcc[plr] = {}
+    
+        for _, acc in ipairs(targetChar:GetChildren()) do
+            if acc:IsA("Accessory") then
+                hiddenAcc[plr][acc] = acc.Parent
+                acc.Parent = nil
+            end
+        end
+    end
+
 
     -- KOLLARI SİL (HER MOD)
     pcall(function()
@@ -507,7 +515,9 @@ local function bringTarget(plr)
         -- Neck'i tamamen kopar
         local neck = char:FindFirstChild("Neck", true)
         if neck then
-            neck:Destroy()
+            if neck and neck:IsA("Motor6D") then
+                neck.Enabled = false
+            end
         end
     
         -- Head fizik ayarları
@@ -520,6 +530,12 @@ local function bringTarget(plr)
         for _, v in ipairs(head:GetChildren()) do
             if v:IsA("Decal") or v:IsA("Accessory") or v:IsA("Attachment") then
                 v:Destroy()
+            end
+        end
+        for _, acc in ipairs(char:GetChildren()) do
+            if acc:IsA("Accessory") then
+                acc.Handle.Transparency = 1
+                acc.Handle.CanCollide = false
             end
         end
     
@@ -541,6 +557,12 @@ local function bringTarget(plr)
                 myHand.CFrame
                 * CFrame.new(0, -0.15, -0.45)
         end)
+
+        local rootJoint = targetChar:FindFirstChild("RootJoint", true)
+        if rootJoint and rootJoint:IsA("Motor6D") then
+            rootJoint.Enabled = false
+        end
+
     
         return
     end
@@ -556,6 +578,48 @@ local function bringTarget(plr)
 
     head.Transparency = 0
     targetHRP.CFrame = myHand.CFrame * CFrame.new(0, -0.3, -0.8)
+end
+
+local function releaseTarget(plr)
+    -- Heartbeat bağlantısını kes
+    if noBringConnections[plr] then
+        noBringConnections[plr]:Disconnect()
+        noBringConnections[plr] = nil
+    end
+
+    if not plr.Character then return end
+    local char = plr.Character
+    local head = char:FindFirstChild("Head")
+
+    -- Head'i eski haline getir
+    if head then
+        head.Massless = false
+        head.CanCollide = true
+    end
+
+    -- Neck'i tekrar aç
+    local neck = char:FindFirstChild("Neck", true)
+    if neck and neck:IsA("Motor6D") then
+        neck.Enabled = true
+    end
+
+    for _, acc in ipairs(char:GetChildren()) do
+        if acc:IsA("Accessory") then
+            acc.Handle.Transparency = 0
+            acc.Handle.CanCollide = true
+        end
+    end
+
+    -- ACCESSORY'LERİ GERİ KOY
+    if hiddenAcc[plr] then
+        for acc, parent in pairs(hiddenAcc[plr]) do
+            if acc and parent then
+                acc.Parent = parent
+            end
+        end
+        hiddenAcc[plr] = nil
+    end
+
 end
 
 
