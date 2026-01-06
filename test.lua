@@ -4,7 +4,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 local Window = Fluent:CreateWindow({
     Title = "Woldan Hub | Muscle Legends",
-    SubTitle = "V2.4.5 | Free Version NEVERLOSE.CC Developed By Woldan",
+    SubTitle = "V2.5 | Free Version | discord.gg/baristv44",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 260),
     Acrylic = true,
@@ -26,9 +26,9 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 -- TEXT BUTTON
 local button = Instance.new("TextButton")
-button.Size = UDim2.fromOffset(120, 45)
-button.Position = UDim2.new(0.45, -60, 0.4, -22) -- ekran ortası + hafif sol üst
-button.Text = "MENU"
+button.Size = UDim2.fromOffset(65, 65)
+button.Position = UDim2.new(0.35, -100, 0.3, -60) -- ekran ortası + hafif sol üst
+button.Text = "NL"
 button.TextSize = 18
 button.Font = Enum.Font.GothamBold
 button.TextColor3 = Color3.fromRGB(255,255,255)
@@ -87,10 +87,10 @@ button.MouseButton1Click:Connect(function()
 
     if opened then
         Window:Restore()
-        button.Text = "MENU"
+        button.Text = "NL"
     else
         Window:Minimize()
-        button.Text = "OPEN"
+        button.Text = "NL"
     end
 end)
 
@@ -169,7 +169,6 @@ SpeedSlider:OnChanged(function(value)
         player.Character.Humanoid.WalkSpeed = speedValue
     end
 end)
-
 
 local autoRebirthEnabled = false
 local rebirthMode = "Normal"
@@ -308,91 +307,265 @@ autoCrystalToggle:OnChanged(function(value)
     end
 end)
 
+-- ===============================
+-- KILLER SYSTEM (REWORKED)
+-- ===============================
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+
+local autoKillAll = false
+local autoKillTarget = false
+local bringMode = "Bring"
+local selectedTarget = nil
+local whitelistTarget = nil
+
+-- ===============================
+-- UI
+-- ===============================
+Tabs.Killer:AddDropdown("BringMode", {
+    Title = "Bring Mode",
+    Values = {"Bring", "No Bring"},
+    Default = "Bring"
+}):OnChanged(function(v)
+    bringMode = v
+end)
+
+local playerList = {}
+local function refreshPlayers()
+    table.clear(playerList)
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp then
+            table.insert(playerList, p.Name)
+        end
+    end
+
+    -- 🔥 Fluent dropdown'lara bildir
+    if targetDropdown then
+        targetDropdown:SetValues(playerList)
+    end
+
+    if whitelistDropdown then
+        whitelistDropdown:SetValues(playerList)
+    end
+end
+refreshPlayers()
+
+targetDropdown = Tabs.Killer:AddDropdown("TargetPlayer", {
+    Title = "Auto Kill Player",
+    Values = playerList,
+    Default = playerList[1]
+}):OnChanged(function(v)
+    selectedTarget = v
+end)
+
+whitelistDropdown = Tabs.Killer:AddDropdown("WhitelistPlayer", {
+    Title = "Whitelist Player",
+    Values = playerList,
+    Default = nil
+}):OnChanged(function(v)
+    whitelistTarget = v
+end)
+
+Tabs.Killer:AddButton({
+    Title = "Refresh Player List",
+    Callback = function()
+        refreshPlayers()
+    end
+})
+
+-- ===============================
+-- UTILS
+-- ===============================
+local function getChar(plr)
+    return plr.Character or plr.CharacterAdded:Wait()
+end
+
+local function getHRP(char)
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+local function equipPunch()
+    local char = getChar(lp)
+    local tool = lp.Backpack:FindFirstChild("Punch") or char:FindFirstChild("Punch")
+    if tool and tool.Parent ~= char then
+        tool.Parent = char
+    end
+    return char:FindFirstChild("Punch") ~= nil
+end
+
+local function breakArms(targetChar)
+    pcall(function()
+        local la =
+            targetChar:FindFirstChild("Left Arm")
+            or targetChar:FindFirstChild("LeftHand")
+            or targetChar:FindFirstChild("LeftLowerArm")
+
+        local ra =
+            targetChar:FindFirstChild("Right Arm")
+            or targetChar:FindFirstChild("RightHand")
+            or targetChar:FindFirstChild("RightLowerArm")
+
+        if la then la:Destroy() end
+        if ra then ra:Destroy() end
+    end)
+end
+
+local RunService = game:GetService("RunService")
+local noBringConnections = {}
+
+local function bringTarget(plr)
+    if plr == lp then return end
+    if whitelistTarget and plr.Name == whitelistTarget then return end
+
+    local myChar = lp.Character
+    local targetChar = plr.Character
+    if not myChar or not targetChar then return end
+
+    local myHand =
+        myChar:FindFirstChild("RightHand")
+        or myChar:FindFirstChild("Right Arm")
+        or myChar:FindFirstChild("RightLowerArm")
+
+    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+    local head = targetChar:FindFirstChild("Head")
+
+    if not myHand or not head then return end
+
+    -- KOLLARI SİL (HER MOD)
+    pcall(function()
+        local la =
+            targetChar:FindFirstChild("Left Arm")
+            or targetChar:FindFirstChild("LeftHand")
+            or targetChar:FindFirstChild("LeftLowerArm")
+
+        local ra =
+            targetChar:FindFirstChild("Right Arm")
+            or targetChar:FindFirstChild("RightHand")
+            or targetChar:FindFirstChild("RightLowerArm")
+
+        if la then la:Destroy() end
+        if ra then ra:Destroy() end
+    end)
+
+    -- =========================
+    -- NO BRING MODE (HEAD HITBOX – FACE KALIR)
+    -- =========================
+    if bringMode == "No Bring" then
+        -- Neck kapat (body sürüklenmesin)
+        local neck = targetChar:FindFirstChild("Neck", true)
+        if neck and neck:IsA("Motor6D") then
+            neck.Enabled = false
+        end
+    
+        head.Anchored = false
+        head.CanCollide = false
+        head.Massless = true
+    
+        -- Head’i küçült → body etkisi sıfıra yakın
+        head.Size = Vector3.new(0.2, 0.2, 0.2)
+    
+        -- Face decal aynen kalsın
+        local face = head:FindFirstChildOfClass("Decal")
+        if face then
+            face.Transparency = 0
+        end
+    
+        head.AssemblyLinearVelocity = Vector3.zero
+        head.AssemblyAngularVelocity = Vector3.zero
+    
+        -- Daha önce bağlandıysa tekrar bağlama
+        if noBringConnections[plr] then return end
+    
+        noBringConnections[plr] = RunService.Heartbeat:Connect(function()
+            if not head.Parent or not myHand.Parent then
+                if noBringConnections[plr] then
+                    noBringConnections[plr]:Disconnect()
+                    noBringConnections[plr] = nil
+                end
+                return
+            end
+    
+            -- Ele TAM YAPIŞTIR
+            head.CFrame =
+                myHand.CFrame
+                * CFrame.new(0, -0.12, -0.4)
+                * CFrame.Angles(0, math.rad(180), 0)
+        end)
+    
+        return
+    end
+
+    -- =========================
+    -- BRING MODE (DOKUNMADIK)
+    -- =========================
+    if not targetHRP then return end
+
+    targetHRP.AssemblyLinearVelocity = Vector3.zero
+    targetHRP.AssemblyAngularVelocity = Vector3.zero
+    targetHRP.CanCollide = false
+
+    head.Transparency = 0
+    targetHRP.CFrame = myHand.CFrame * CFrame.new(0, -0.3, -0.8)
+end
 
 
-local autoKillEnabled = false
+-- ===============================
+-- ATTACK
+-- ===============================
+local function punch()
+    lp:WaitForChild("muscleEvent"):FireServer("punch", "rightHand")
+end
 
-Tabs.Killer:AddToggle("AutoKill", {
-    Title = "Auto Kill",
+-- ===============================
+-- AUTO KILL (EVERYONE)
+-- ===============================
+Tabs.Killer:AddToggle("AutoKillAll", {
+    Title = "Auto Kill (Everyone)",
     Default = false
-}):OnChanged(function(Value)
-    autoKillEnabled = Value
+}):OnChanged(function(v)
+    autoKillAll = v
 
-    if autoKillEnabled then
+    if v then
         task.spawn(function()
-            local lp = game:GetService("Players").LocalPlayer
-
-            while autoKillEnabled do
-                local player = game.Players.LocalPlayer
-                local char = player.Character or player.CharacterAdded:Wait()
-                local rightArm = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm") or char:FindFirstChild("RightLowerArm")
-
-                -- Yumruk aracını kontrol et ve karaktere al
-                local punchTool = player.Backpack:FindFirstChild("Punch") or char:FindFirstChild("Punch")
-                if punchTool and punchTool.Parent ~= char then
-                    punchTool.Parent = char
-                end
-
-                -- Eğer tool karakterde değilse adamları çekme
-                if not char:FindFirstChild("Punch") then
-                    task.wait(0.1)
-                    continue
-                end
-
-                -- Oyuncuları çekme ve kolları silme
-                for _, plr in pairs(game.Players:GetPlayers()) do
-                    if plr ~= lp and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                        local targetChar = plr.Character
-                        local hrp = targetChar:FindFirstChild("HumanoidRootPart")
-
-                        pcall(function()
-                            local leftArm = targetChar:FindFirstChild("Left Arm") or targetChar:FindFirstChild("LeftHand") or targetChar:FindFirstChild("LeftLowerArm")
-                            local rightArmT = targetChar:FindFirstChild("Right Arm") or targetChar:FindFirstChild("RightHand") or targetChar:FindFirstChild("RightLowerArm")
-                            if leftArm then leftArm:Destroy() end
-                            if rightArmT then rightArmT:Destroy() end
-                        end)
-
-                        local targetPos = rightArm and rightArm.CFrame * CFrame.new(0.5, 0, 0)
-                        if hrp and targetPos then
-                            hrp.CFrame = targetPos
-                        end
+            while autoKillAll do
+                if equipPunch() then
+                    for _, plr in ipairs(Players:GetPlayers()) do
+                        bringTarget(plr)
+                        punch()
                     end
                 end
-
-                -- Yumruk animasyonu ve eventi
-                pcall(function()
-                    local argsRight = { "punch", "rightHand" }
-                    player:WaitForChild("muscleEvent"):FireServer(unpack(argsRight))
-
-                    local animRight = game:GetService("ReplicatedStorage").GameAnims.Tools.Punch.attacks.rightAttack
-                    playAttackAnimation(animRight)
-                end)
-
-                task.wait(0.1)
+                task.wait(0.15)
             end
         end)
     end
 end)
 
+-- ===============================
+-- AUTO KILL (SINGLE PLAYER)
+-- ===============================
+Tabs.Killer:AddToggle("AutoKillTarget", {
+    Title = "Auto Kill Player",
+    Default = false
+}):OnChanged(function(v)
+    autoKillTarget = v
 
-local selectedTarget = nil
-local autoKillTargetEnabled = false
-local playerNames = {}
-
--- Oyuncuları çekme fonksiyonu
-local function refreshPlayerList()
-    table.clear(playerNames)
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= game.Players.LocalPlayer then
-            table.insert(playerNames, player.Name)
-        end
+    if v then
+        task.spawn(function()
+            while autoKillTarget do
+                if equipPunch() and selectedTarget then
+                    local plr = Players:FindFirstChild(selectedTarget)
+                    if plr then
+                        bringTarget(plr)
+                        punch()
+                    end
+                end
+                task.wait(0.15)
+            end
+        end)
     end
+end)
 
-    -- Dropdown'ı güncelle
-    if targetDropdown then
-        targetDropdown:SetValues(playerNames)
-    end
-end
 
 local mevlanatoggle = false
 local mevlanaspeed = 15
@@ -444,82 +617,6 @@ task.spawn(function()
             rootPart.CFrame = CFrame.new(rootPart.Position) * CFrame.Angles(0, rotation, 0)
         end
         task.wait(0.03)
-    end
-end)
-
-
--- İlk listeleme
-refreshPlayerList()
-
--- Dropdown tanımı
-targetDropdown = Tabs.Killer:AddDropdown("TargetPlayer", {
-    Title = "Target Oyuncu",
-    Values = playerNames,
-    Multi = false,
-    Default = playerNames[1] or ""
-})
-
-targetDropdown:OnChanged(function(value)
-    selectedTarget = value
-end)
-
--- Refresh butonu
-Tabs.Killer:AddButton({
-    Title = "Refresh Player List",
-    Description = "Refresh Player List",
-    Callback = function()
-        refreshPlayerList()
-    end
-})
-
--- Auto Kill Toggle
-Tabs.Killer:AddToggle("AutoKillTarget", {
-    Title = "Auto Kill Target",
-    Default = false
-}):OnChanged(function(Value)
-    autoKillTargetEnabled = Value
-
-    if autoKillTargetEnabled then
-        task.spawn(function()
-            local lp = game:GetService("Players").LocalPlayer
-            local char = lp.Character or lp.CharacterAdded:Wait()
-            local rightArm = char:WaitForChild("RightHand") or char:WaitForChild("Right Arm") or char:WaitForChild("RightLowerArm")
-
-            while autoKillTargetEnabled and selectedTarget do
-                local targetPlayer = game.Players:FindFirstChild(selectedTarget)
-
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local targetChar = targetPlayer.Character
-                    local hrp = targetChar:FindFirstChild("HumanoidRootPart")
-
-                    pcall(function()
-                        local leftArm = targetChar:FindFirstChild("Left Arm") or targetChar:FindFirstChild("LeftHand") or targetChar:FindFirstChild("LeftLowerArm")
-                        local rightArmT = targetChar:FindFirstChild("Right Arm") or targetChar:FindFirstChild("RightHand") or targetChar:FindFirstChild("RightLowerArm")
-                        if leftArm then leftArm:Destroy() end
-                        if rightArmT then rightArmT:Destroy() end
-                    end)
-
-                    local player = game.Players.LocalPlayer
-                    local tool = player.Backpack:FindFirstChild("Punch")
-                    if tool then
-                        tool.Parent = player.Character
-                    end
-
-                    local targetPos = rightArm.CFrame * CFrame.new(0.5, 0, 0)
-                    hrp.CFrame = targetPos
-
-                    local argsRight = { "punch", "rightHand" }
-
-                    pcall(function()
-                        game.Players.LocalPlayer:WaitForChild("muscleEvent"):FireServer(unpack(argsRight))
-                        local animRight = game:GetService("ReplicatedStorage").GameAnims.Tools.Punch.attacks.rightAttack
-                        playAttackAnimation(animRight)
-                    end)
-                end
-
-                task.wait(0.1)
-            end
-        end)
     end
 end)
 
@@ -687,36 +784,35 @@ AutoCollectToggle:OnChanged(function(Value)
 end)
 
 
--- Başlangıç zamanı kaydedilir
+-- Başlangıç zamanı
 local startTime = os.time()
 
--- Paragraph oluşturuluyor
+-- Paragraph oluştur
 local elapsedParagraph = Tabs.Status:AddParagraph({
     Title = "Script Uptime",
     Content = "Elapsed Time: Calculating..."
 })
 
--- Süreyi güncelleyen görev başlatılır
+-- Süreyi güncelle
 task.spawn(function()
-    while true do
-        local now = os.time()
-        local elapsed = now - startTime
+    while not Fluent.Unloaded do
+        local elapsed = os.time() - startTime
 
         local minutes = math.floor(elapsed / 60)
         local seconds = elapsed % 60
 
-        -- Güncellenmiş metin
-        local content = string.format("Elapsed Time: %02dm %02ds", minutes, seconds)
+        local content = string.format(
+            "Elapsed Time: %02dm %02ds",
+            minutes,
+            seconds
+        )
 
-        -- Paragrafı güncelle
-        pcall(function()
-            elapsedParagraph:SetContent(content)
-        end)
+        -- 🔥 Fluent için doğru fonksiyon
+        elapsedParagraph:SetDesc(content)
 
         task.wait(1)
     end
 end)
-
 
 
 
@@ -766,7 +862,29 @@ local keepRockUp = false
 local targetY = 5000
 local targetPosition = Vector3.new(0, targetY, 0)
 
-Tabs.Main:AddToggle("FakeRockPunch", {
+local selectedRockName = "Muscle King Mountain"
+
+local rockList = {
+    "Ancient Jungle Rock",
+    "Muscle King Mountain",
+    "Rock Of Legends"
+}
+
+local rockYOffset = {
+    ["Ancient Jungle Rock"] = -28,
+    ["Muscle King Mountain"] = 0,
+    ["Rock Of Legends"] = 28
+}
+
+Tabs.Exploits:AddDropdown("FakeRockSelector", {
+    Title = "Select Fake Rock",
+    Values = rockList,
+    Default = "Muscle King Mountain"
+}):OnChanged(function(v)
+    selectedRockName = v
+end)
+
+Tabs.Exploits:AddToggle("FakeRockPunch", {
     Title = "Auto Fake Rock Punch",
     Default = false
 }):OnChanged(function(Value)
@@ -779,7 +897,7 @@ Tabs.Main:AddToggle("FakeRockPunch", {
             local char = player.Character or player.CharacterAdded:Wait()
             local hrp = char:WaitForChild("HumanoidRootPart")
 
-            local rock = workspace.machinesFolder["Muscle King Mountain"]:FindFirstChild("Rock")
+            local rock = workspace.machinesFolder[selectedRockName]:FindFirstChild("Rock")
             if not rock then
                 warn("Rock bulunamadı.")
                 return
@@ -793,7 +911,8 @@ Tabs.Main:AddToggle("FakeRockPunch", {
                 runService:BindToRenderStep("KeepRockUp", Enum.RenderPriority.First.Value, function()
                     if keepRockUp and movedRock then
                         movedRock.Anchored = true
-                        movedRock.CFrame = CFrame.new(targetPosition)
+                        local yOffset = rockYOffset[selectedRockName] or 0
+                        movedRock.CFrame = CFrame.new(targetPosition + Vector3.new(0, yOffset, 0))
                     end
                 end)
             end
