@@ -374,6 +374,47 @@ local function refreshPlayers()
     end
 end
 
+local function releaseTarget(plr)
+    -- Heartbeat bağlantısını kes
+    if noBringConnections[plr] then
+        noBringConnections[plr]:Disconnect()
+        noBringConnections[plr] = nil
+    end
+
+    if not plr.Character then return end
+    local char = plr.Character
+    local head = char:FindFirstChild("Head")
+
+    -- Head'i eski haline getir
+    if head then
+        head.Massless = false
+        head.CanCollide = true
+    end
+
+    -- Neck'i tekrar aç
+    local neck = char:FindFirstChild("Neck", true)
+    if neck and neck:IsA("Motor6D") then
+        neck.Enabled = true
+    end
+
+    for _, acc in ipairs(char:GetChildren()) do
+        if acc:IsA("Accessory") then
+            acc.Handle.Transparency = 0
+            acc.Handle.CanCollide = true
+        end
+    end
+
+    -- ACCESSORY'LERİ GERİ KOY
+    if hiddenAcc[plr] then
+        for acc, parent in pairs(hiddenAcc[plr]) do
+            if acc and parent then
+                acc.Parent = parent
+            end
+        end
+        hiddenAcc[plr] = nil
+    end
+
+end
 
 targetDropdown = Tabs.Killer:AddDropdown("TargetPlayer", {
     Title = "Auto Kill Player",
@@ -574,48 +615,6 @@ local function bringTarget(plr)
 
     head.Transparency = 0
     targetHRP.CFrame = myHand.CFrame * CFrame.new(0, -0.3, -0.8)
-end
-
-local function releaseTarget(plr)
-    -- Heartbeat bağlantısını kes
-    if noBringConnections[plr] then
-        noBringConnections[plr]:Disconnect()
-        noBringConnections[plr] = nil
-    end
-
-    if not plr.Character then return end
-    local char = plr.Character
-    local head = char:FindFirstChild("Head")
-
-    -- Head'i eski haline getir
-    if head then
-        head.Massless = false
-        head.CanCollide = true
-    end
-
-    -- Neck'i tekrar aç
-    local neck = char:FindFirstChild("Neck", true)
-    if neck and neck:IsA("Motor6D") then
-        neck.Enabled = true
-    end
-
-    for _, acc in ipairs(char:GetChildren()) do
-        if acc:IsA("Accessory") then
-            acc.Handle.Transparency = 0
-            acc.Handle.CanCollide = true
-        end
-    end
-
-    -- ACCESSORY'LERİ GERİ KOY
-    if hiddenAcc[plr] then
-        for acc, parent in pairs(hiddenAcc[plr]) do
-            if acc and parent then
-                acc.Parent = parent
-            end
-        end
-        hiddenAcc[plr] = nil
-    end
-
 end
 
 
