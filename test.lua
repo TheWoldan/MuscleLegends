@@ -324,7 +324,6 @@ local bringMode = "Bring"
 local selectedTarget = nil
 local whitelistTarget = nil
 local noBringConnections = {}
-local ghostHeads = {}
 
 -- ===============================
 -- UI
@@ -350,11 +349,6 @@ local function releaseTarget(plr)
     local neck = char:FindFirstChild("Neck", true)
     if neck and neck:IsA("Motor6D") then
         neck.Enabled = true
-    end
-    -- Ghost head'i sil
-    if ghostHeads[plr] then
-        ghostHeads[plr]:Destroy()
-        ghostHeads[plr] = nil
     end
 end
 
@@ -504,49 +498,48 @@ local function bringTarget(plr)
     -- NO BRING MODE (HEAD HITBOX – FACE KALIR)
     -- =========================
     if bringMode == "No Bring" then
-        -- Daha önce oluşturulduysa tekrar yapma
-        if ghostHeads[plr] then return end
+        local char = plr.Character
+        if not char then return end
     
-        -- Gerçek head'e dokunma
-        local realHead = head
+        local head = char:FindFirstChild("Head")
+        if not head then return end
     
-        -- Client-only ghost oluştur
-        local ghost = Instance.new("Part")
-        ghost.Name = "GhostHead"
-        ghost.Size = realHead.Size
-        ghost.Transparency = 1
-        ghost.CanCollide = false
-        ghost.Anchored = true
-        ghost.Massless = true
-        ghost.Parent = workspace
+        -- Neck'i tamamen kopar
+        local neck = char:FindFirstChild("Neck", true)
+        if neck then
+            neck:Destroy()
+        end
     
-        -- Server'a gerçek parça gitmesin diye
-        ghost:SetAttribute("ClientOnly", true)
+        -- Head fizik ayarları
+        head.Anchored = false
+        head.CanCollide = false
+        head.Massless = true
+        head.Transparency = 1 -- görünmez
     
-        ghostHeads[plr] = ghost
+        -- Hair / face / decals TEMİZLE
+        for _, v in ipairs(head:GetChildren()) do
+            if v:IsA("Decal") or v:IsA("Accessory") or v:IsA("Attachment") then
+                v:Destroy()
+            end
+        end
+    
+        -- Velocity sıfırla
+        head.AssemblyLinearVelocity = Vector3.zero
+        head.AssemblyAngularVelocity = Vector3.zero
+    
+        -- Zaten bağlıysa tekrar bağlama
+        if noBringConnections[plr] then return end
     
         noBringConnections[plr] = RunService.Heartbeat:Connect(function()
-            if not ghostHeads[plr]
-            or not realHead.Parent
-            or not myHand.Parent then
-    
-                if noBringConnections[plr] then
-                    noBringConnections[plr]:Disconnect()
-                    noBringConnections[plr] = nil
-                end
-    
-                if ghostHeads[plr] then
-                    ghostHeads[plr]:Destroy()
-                    ghostHeads[plr] = nil
-                end
+            if not head.Parent or not myHand.Parent then
+                releaseTarget(plr)
                 return
             end
     
-            -- SADECE GHOST ELE GELSİN
-            ghost.CFrame =
+            -- SADECE KAFAYI ELE KİLİTLE
+            head.CFrame =
                 myHand.CFrame
-                * CFrame.new(0, -0.12, -0.4)
-                * CFrame.Angles(0, math.rad(180), 0)
+                * CFrame.new(0, -0.15, -0.45)
         end)
     
         return
@@ -927,9 +920,6 @@ end)
 
 local antiAfkEnabled = false
 local lastInputTime = tick()
-
--- Kullanıcı girişini takip et
-local UserInputService = game:GetService("UserInputService")
 
 UserInputService.InputBegan:Connect(function()
     lastInputTime = tick()
