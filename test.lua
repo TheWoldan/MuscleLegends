@@ -365,15 +365,11 @@ local function refreshPlayers()
 
     if targetDropdown then
         targetDropdown:SetValues(playerList)
-        if #playerList > 0 then
-            targetDropdown:SetValue(playerList[1])
-            selectedTarget = playerList[1]
-        end
+        selectedTarget = playerList[1] -- sadece değişkeni set et
     end
 
     if whitelistDropdown then
         whitelistDropdown:SetValues(playerList)
-        whitelistDropdown:SetValue(nil)
         whitelistTarget = nil
     end
 end
