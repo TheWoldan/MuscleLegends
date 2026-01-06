@@ -323,10 +323,41 @@ local autoKillTarget = false
 local bringMode = "Bring"
 local selectedTarget = nil
 local whitelistTarget = nil
+local noBringConnections = {}
+local ghostHeads = {}
 
 -- ===============================
 -- UI
 -- ===============================
+local function releaseTarget(plr)
+    -- Heartbeat bağlantısını kes
+    if noBringConnections[plr] then
+        noBringConnections[plr]:Disconnect()
+        noBringConnections[plr] = nil
+    end
+
+    if not plr.Character then return end
+    local char = plr.Character
+    local head = char:FindFirstChild("Head")
+
+    -- Head'i eski haline getir
+    if head then
+        head.Massless = false
+        head.CanCollide = true
+    end
+
+    -- Neck'i tekrar aç
+    local neck = char:FindFirstChild("Neck", true)
+    if neck and neck:IsA("Motor6D") then
+        neck.Enabled = true
+    end
+    -- Ghost head'i sil
+    if ghostHeads[plr] then
+        ghostHeads[plr]:Destroy()
+        ghostHeads[plr] = nil
+    end
+end
+
 Tabs.Killer:AddDropdown("BringMode", {
     Title = "Bring Mode",
     Values = {"Bring", "No Bring"},
@@ -434,31 +465,6 @@ local function breakArms(targetChar)
 end
 
 local RunService = game:GetService("RunService")
-local noBringConnections = {}
-
-local function releaseTarget(plr)
-    -- Heartbeat bağlantısını kes
-    if noBringConnections[plr] then
-        noBringConnections[plr]:Disconnect()
-        noBringConnections[plr] = nil
-    end
-
-    if not plr.Character then return end
-    local char = plr.Character
-    local head = char:FindFirstChild("Head")
-
-    -- Head'i eski haline getir
-    if head then
-        head.Massless = false
-        head.CanCollide = true
-    end
-
-    -- Neck'i tekrar aç
-    local neck = char:FindFirstChild("Neck", true)
-    if neck and neck:IsA("Motor6D") then
-        neck.Enabled = true
-    end
-end
 
 local function bringTarget(plr)
     if plr == lp then return end
@@ -498,39 +504,46 @@ local function bringTarget(plr)
     -- NO BRING MODE (HEAD HITBOX – FACE KALIR)
     -- =========================
     if bringMode == "No Bring" then
-        -- Neck kapat (body sürüklenmesin)
-        local neck = targetChar:FindFirstChild("Neck", true)
-        if neck and neck:IsA("Motor6D") then
-            neck.Enabled = false
-        end
+        -- Daha önce oluşturulduysa tekrar yapma
+        if ghostHeads[plr] then return end
     
-        head.Anchored = false
-        head.CanCollide = false
-        head.Massless = true
+        -- Gerçek head'e dokunma
+        local realHead = head
     
-        -- Face decal aynen kalsın
-        local face = head:FindFirstChildOfClass("Decal")
-        if face then
-            face.Transparency = 0
-        end
+        -- Client-only ghost oluştur
+        local ghost = Instance.new("Part")
+        ghost.Name = "GhostHead"
+        ghost.Size = realHead.Size
+        ghost.Transparency = 1
+        ghost.CanCollide = false
+        ghost.Anchored = true
+        ghost.Massless = true
+        ghost.Parent = workspace
     
-        head.AssemblyLinearVelocity = Vector3.zero
-        head.AssemblyAngularVelocity = Vector3.zero
+        -- Server'a gerçek parça gitmesin diye
+        ghost:SetAttribute("ClientOnly", true)
     
-        -- Daha önce bağlandıysa tekrar bağlama
-        if noBringConnections[plr] then return end
+        ghostHeads[plr] = ghost
     
         noBringConnections[plr] = RunService.Heartbeat:Connect(function()
-            if not head.Parent or not myHand.Parent then
+            if not ghostHeads[plr]
+            or not realHead.Parent
+            or not myHand.Parent then
+    
                 if noBringConnections[plr] then
                     noBringConnections[plr]:Disconnect()
                     noBringConnections[plr] = nil
                 end
+    
+                if ghostHeads[plr] then
+                    ghostHeads[plr]:Destroy()
+                    ghostHeads[plr] = nil
+                end
                 return
             end
     
-            -- Ele TAM YAPIŞTIR
-            head.CFrame =
+            -- SADECE GHOST ELE GELSİN
+            ghost.CFrame =
                 myHand.CFrame
                 * CFrame.new(0, -0.12, -0.4)
                 * CFrame.Angles(0, math.rad(180), 0)
@@ -641,6 +654,24 @@ Players.PlayerRemoving:Connect(function(plr)
     if noBringConnections[plr] then
         noBringConnections[plr]:Disconnect()
         noBringConnections[plr] = nil
+    end
+end)
+lp.CharacterAdded:Connect(function()
+    if bringMode == "No Bring" and (autoKillAll or autoKillTarget) then
+        task.wait(0.3)
+
+        if autoKillTarget and selectedTarget then
+            local plr = Players:FindFirstChild(selectedTarget)
+            if plr then
+                bringTarget(plr)
+            end
+        end
+
+        if autoKillAll then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                bringTarget(plr)
+            end
+        end
     end
 end)
 
