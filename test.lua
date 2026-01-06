@@ -31,7 +31,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 -- TEXT BUTTON
 local button = Instance.new("TextButton")
 button.Size = UDim2.fromOffset(65, 65)
-button.Position = UDim2.new(0.35, -100, 0.3, -60)
+button.Position = UDim2.new(0.35, -100, 0.3, -60) -- ekran ortası + hafif sol üst
 button.Text = "NL"
 button.TextSize = 18
 button.Font = Enum.Font.GothamBold
@@ -112,6 +112,8 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Setings", Icon = "settings" })
 }
 
+if _G.KillerLoaded then return end
+_G.KillerLoaded = true
 
 local Options = Fluent.Options
 
@@ -334,8 +336,16 @@ Tabs.Killer:AddDropdown("BringMode", {
 
     -- NoBring'den çıkınca herkesi bırak
     if v == "Bring" then
-        for plr, _ in pairs(noBringConnections) do
-            releaseTarget(plr)
+        if type(noBringConnections) == "table" then
+            local toRelease = {}
+        
+            for plr in pairs(noBringConnections) do
+                table.insert(toRelease, plr)
+            end
+        
+            for _, plr in ipairs(toRelease) do
+                releaseTarget(plr)
+            end
         end
     end
 end)
@@ -383,6 +393,7 @@ Tabs.Killer:AddButton({
         refreshPlayers()
     end
 })
+
 refreshPlayers()
 
 -- ===============================
@@ -560,8 +571,16 @@ Tabs.Killer:AddToggle("AutoKillAll", {
 
     -- Toggle KAPANDIYSA → herkesi bırak
     if not v then
-        for plr, _ in pairs(noBringConnections) do
-            releaseTarget(plr)
+        if type(noBringConnections) == "table" then
+            local toRelease = {}
+        
+            for plr in pairs(noBringConnections) do
+                table.insert(toRelease, plr)
+            end
+        
+            for _, plr in ipairs(toRelease) do
+                releaseTarget(plr)
+            end
         end
         return
     end
@@ -589,12 +608,20 @@ Tabs.Killer:AddToggle("AutoKillTarget", {
     autoKillTarget = v
 
     -- Toggle kapandıysa bırak
-    if not v then
-        for plr, _ in pairs(noBringConnections) do
-            releaseTarget(plr)
+        if not v then
+            if type(noBringConnections) == "table" then
+                local toRelease = {}
+        
+                for plr in pairs(noBringConnections) do
+                    table.insert(toRelease, plr)
+                end
+        
+                for _, plr in ipairs(toRelease) do
+                    releaseTarget(plr)
+                end
+            end
+            return
         end
-        return
-    end
 
     task.spawn(function()
         while autoKillTarget do
